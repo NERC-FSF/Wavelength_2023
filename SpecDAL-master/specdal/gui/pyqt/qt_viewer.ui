@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1082</width>
+    <height>629</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>SpecDAL GUI</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="toolbarLayout">
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+     </layout>
+    </item>
+    <item>
+     <widget class="QWidget" name="widget" native="true">
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="0">
+        <widget class="QSplitter" name="splitter">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="handleWidth">
+          <number>12</number>
+         </property>
+         <property name="childrenCollapsible">
+          <bool>true</bool>
+         </property>
+         <widget class="QFrame" name="frame">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>6</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::StyledPanel</enum>
+          </property>
+          <property name="frameShadow">
+           <enum>QFrame::Sunken</enum>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <layout class="QVBoxLayout" name="plotLayout"/>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="layoutWidget">
+          <layout class="QVBoxLayout" name="verticalLayout_2">
+           <item>
+            <layout class="QGridLayout" name="gridLayout">
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label">
+               <property name="text">
+                <string>Select Group:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QComboBox" name="groupBox">
+               <item>
+                <property name="text">
+                 <string>--</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLineEdit" name="nameSelection">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>Select Spectra by Name</string>
+               </property>
+               <property name="whatsThis">
+                <string/>
+               </property>
+               <property name="placeholderText">
+                <string>Select by Name</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QPushButton" name="selectByName">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Select</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QPushButton" name="createGroup">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Name Group</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLineEdit" name="groupName">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="placeholderText">
+                <string>Name for Selection</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="onlyShowSelected">
+             <property name="text">
+              <string>Only Show Selected</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QListWidget" name="spectraList">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::ExtendedSelection</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="loadLabel">
+             <property name="text">
+              <string/>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1082</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSave"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionPlot_Config"/>
+   </widget>
+   <widget class="QMenu" name="menuFlags">
+    <property name="title">
+     <string>Flags</string>
+    </property>
+    <addaction name="actionFlag_Selection"/>
+    <addaction name="actionUnflag_Selection"/>
+    <addaction name="actionShow_Hide_Flagged"/>
+    <addaction name="actionExport_Flags"/>
+   </widget>
+   <widget class="QMenu" name="menuOperators">
+    <property name="title">
+     <string>Operators</string>
+    </property>
+    <widget class="QMenu" name="menuPlot_Metric">
+     <property name="title">
+      <string>Plot Metric...</string>
+     </property>
+     <addaction name="actionMean_2"/>
+     <addaction name="actionMedian_2"/>
+     <addaction name="actionMaximum"/>
+     <addaction name="actionMinimum"/>
+     <addaction name="actionStandard_Deviation"/>
+    </widget>
+    <addaction name="actionStitch"/>
+    <addaction name="actionJump_Correct"/>
+    <addaction name="menuPlot_Metric"/>
+   </widget>
+   <widget class="QMenu" name="menuSelection">
+    <property name="title">
+     <string>Selection</string>
+    </property>
+    <addaction name="actionClear"/>
+    <addaction name="actionClear_Selection"/>
+    <addaction name="actionInvert_Selection"/>
+    <addaction name="actionMove_Selection_to_Top"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuFlags"/>
+   <addaction name="menuOperators"/>
+   <addaction name="menuSelection"/>
+  </widget>
+  <action name="actionOpen">
+   <property name="text">
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="actionPlot_Config">
+   <property name="text">
+    <string>Plot Config</string>
+   </property>
+  </action>
+  <action name="actionFlag_Selection">
+   <property name="text">
+    <string>Flag Selection</string>
+   </property>
+  </action>
+  <action name="actionShow_Hide_Flagged">
+   <property name="text">
+    <string>Show/Hide Flagged</string>
+   </property>
+  </action>
+  <action name="actionExport_Flags">
+   <property name="text">
+    <string>Export Flags</string>
+   </property>
+  </action>
+  <action name="actionStitch">
+   <property name="text">
+    <string>Stitch</string>
+   </property>
+  </action>
+  <action name="actionJump_Correct">
+   <property name="text">
+    <string>Jump Correct</string>
+   </property>
+  </action>
+  <action name="actionMean">
+   <property name="text">
+    <string>Mean</string>
+   </property>
+  </action>
+  <action name="actionMedian">
+   <property name="text">
+    <string>Median</string>
+   </property>
+  </action>
+  <action name="actionMode">
+   <property name="text">
+    <string>Mode</string>
+   </property>
+  </action>
+  <action name="actionMax">
+   <property name="text">
+    <string>Max</string>
+   </property>
+  </action>
+  <action name="actionMin">
+   <property name="text">
+    <string>Min</string>
+   </property>
+  </action>
+  <action name="actionMean_2">
+   <property name="text">
+    <string>Mean</string>
+   </property>
+  </action>
+  <action name="actionMedian_2">
+   <property name="text">
+    <string>Median</string>
+   </property>
+  </action>
+  <action name="actionMaximum">
+   <property name="text">
+    <string>Maximum</string>
+   </property>
+  </action>
+  <action name="actionMinimum">
+   <property name="text">
+    <string>Minimum</string>
+   </property>
+  </action>
+  <action name="actionStandard_Deviation">
+   <property name="text">
+    <string>Standard Deviation</string>
+   </property>
+  </action>
+  <action name="actionClear">
+   <property name="text">
+    <string>Select All</string>
+   </property>
+  </action>
+  <action name="actionClear_Selection">
+   <property name="text">
+    <string>Clear Selection</string>
+   </property>
+  </action>
+  <action name="actionInvert_Selection">
+   <property name="text">
+    <string>Invert Selection</string>
+   </property>
+  </action>
+  <action name="actionMove_Selection_to_Top">
+   <property name="text">
+    <string>Move Selection to Top</string>
+   </property>
+  </action>
+  <action name="actionFilter_Selection_by_name">
+   <property name="text">
+    <string>Filter Selection by name...</string>
+   </property>
+  </action>
+  <action name="actionUnflag_Selection">
+   <property name="text">
+    <string>Unflag Selection</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

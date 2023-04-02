@@ -1,0 +1,314 @@
+#!/usr/bin/env python3
+
+import argparse
+from argparse import RawTextHelpFormatter
+import sys
+from os.path import abspath, expanduser
+import os
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
+sys.path.insert(0, os.path.abspath('..'))
+from specdal.containers.collection import Collection, proximal_join, df_to_collection
+import pandas as pd
+from specdal import filters
+import shutil
+
+parser = argparse.ArgumentParser(description='SpecDAL Pipeline',
+                                 formatter_class=RawTextHelpFormatter)
+# io options
+parser.add_argument('input_dir', metavar='INPUT_PATH', action='store',
+                    help='directory containing input files')
+parser.add_argument('--proximal_reference', default=None, metavar='PATH',
+                    action='store',
+                    help='directory containing proximal reference spectral files')
+parser.add_argument('-o', '--output_dir', metavar='PATH',
+                    default='./specdal_output', action='store',
+                    help='directory to store the csv files and figures')
+parser.add_argument('-op', '--prefix', metavar='PREFIX',
+                    type=str, action='store', default='dataset',
+                    help='option to specify prefix for output dataset files')
+parser.add_argument('-of', '--omit_figures', action='store_true',
+                    help='option to omit output png figures')
+parser.add_argument('-od', '--omit_data', action='store_true',
+                    help='option to omit output csv files')
+parser.add_argument('-oi', '--omit_individual', action='store_true',
+                    help='option to omit output of individual csv file for each spectrum file')
+# interpolation
+parser.add_argument('-i', '--interpolate', default=None,
+                    choices=['slinear', 'cubic'],
+                    help='specify the interpolation method.\n'
+                    'method descriptions can be found on scipy docs:\n'
+                    'https://docs.scipy.org/doc/scipy-0.19.1/reference/generated/scipy.interpolate.interp1d.html')
+parser.add_argument('-is', '--interpolate_spacing', metavar='SPC',
+                    action="store", type=int, default=1,
+                    help='specify desired spacing for interpolation in nanometers\n')
+## overlap stitcher
+parser.add_argument('-s', '--stitch', default=None,
+                    choices=['mean', 'median', 'min', 'max','first','last'],
+                    help='specify overlap stitching method;\n'
+                    'not necessary if data at detector edges does not overlap')
+
+parser.add_argument('-sr', '--stitch_reference', default=None, metavar='REF',
+                     type=int, help='specify the reference detector')
+# jump corrector
+parser.add_argument('-j', '--jump_correct', default=None,
+                    choices=['additive'],
+                    help='specify jump correction method;')
+parser.add_argument('-js', '--jump_correct_splices', metavar='WVL',
+                    default=[1000, 1800], type=int, nargs='+',
+                    help='wavelengths of jump locations')
+parser.add_argument('-jr', '--jump_correct_reference', metavar='REF',
+                    type=int, action='store', default=0,
+                    help='specify the reference detector '
+                    '(e.g. VNIR is 1, SWIR1 is 2)')
+# groupby
+parser.add_argument('-g', '--group_by', action='store_true',
+                    help='create groups using filenames')
+parser.add_argument('-gs', '--group_by_separator',  type=str,
+                    metavar='S', default='_',
+                    help='specify filename separator character to define groups')
+parser.add_argument('-gi', '--group_by_indices', metavar='I', nargs='*', type=int,
+                    help='specify the indices of the split filenames to define a group')
+parser.add_argument('-gmean', '--group_mean', dest='aggr', action='append_const',
+                    default=[],
+                    const='mean', help='calculate group means and append to group figures')
+parser.add_argument('-gmedian', '--group_median', dest='aggr', action='append_const',
+                    const='median', help='calculate group median and append to group figures')
+parser.add_argument('-gstd', '--group_std', dest='aggr', action='append_const',
+                    const='std', help='calculate group standard deviation and append to group figures')
+
+#error filter
+parser.add_argument('-fstd','--filter_std',metavar='wl0 wl1 n_std', nargs="+",type=float, 
+                    help='Remove spectra from dataset with a pct_reflect'
+                    ' over n_std\naway from the mean between wavelengths wl0 and wl1.'
+                    '\nCan specify multiple sets of wavenumber ranges and thresholds')
+
+parser.add_argument('-fthresh','--filter_threshold',metavar="wl0 wl1 LO HI",type=float,
+                    nargs='+',
+                    help='Remove spectra from the dataset with a pct_reflect outside\n(LO,HI)'
+                    'in the wavenumber range wl0 wl1. Can specify multiple\nsets of wavenumber'
+                    ' ranges and thresholds')
+
+parser.add_argument('-fwhite','--filter_white',action='store_true',
+                    help='Remove white reference spectra from dataset')
+
+parser.add_argument('-fg','--filter_group',metavar='method',
+                    choices=['mean', 'median', 'min', 'max'],default='mean',
+                    help='How to combine the wavelengths selected by --filter_group.')
+
+parser.add_argument('-fo','--filter_on',metavar='set',
+                    choices=['collection','group','both'],default='collection',
+                    help='What subset of the data to apply filter on' 
+                    ' (collection, group or both)')
+
+parser.add_argument('-yl','--ylim',metavar=('ymin','ymax'),type=float,
+                    nargs=2,help='Force the y axis of plots to display between ymin and ymax')
+# misc
+parser.add_argument('-q', '--quiet', default=False, action='store_true')
+parser.add_argument('-f', '--force', default=False, action='store_true',
+                    help='if output path exists, remove previous output and run')
+
+args = parser.parse_args()
+
+################################################################################
+# main
+################################################################################
+VERBOSE = not args.quiet
+
+def print_if_verbose(*args, **kwargs):
+    if VERBOSE:
+        print(*args, **kwargs)
+    
+indir = abspath(expanduser(args.input_dir))
+outdir = abspath(expanduser(args.output_dir))
+datadir = os.path.join(outdir, 'data')
+figdir = os.path.join(outdir, 'figures')
+
+if not os.path.exists(indir):
+    raise FileNotFoundError("path " + indir + " does not exist")
+
+if os.path.exists(outdir):
+    while not args.force:
+        # prompt user for action
+        ans = input(outdir + ' already exists. Are you sure you want to remove its contents? [y/n]: ')
+        ans = ans.strip().lower()
+        if ans == 'y':
+            args.force = True
+        elif ans == 'n':
+            print('exiting pipeline...')
+            sys.exit(0)
+    print('removing {}'.format(outdir))
+    shutil.rmtree(outdir)
+
+# make output directories
+for d in (outdir, datadir, figdir):
+    os.makedirs(d, exist_ok=True)
+
+c = Collection(name=args.prefix)
+print_if_verbose('Reading target measurements from ' + indir)
+c.read(directory=indir)
+
+if args.proximal_reference:
+    print_if_verbose('Reading base measurements from ' + args.proximal_reference)
+    c_base = Collection(name=args.prefix + '_base')
+    c_base.read(directory=args.proximal_reference)
+
+if args.stitch:
+    print_if_verbose('Stitching...')
+    c.stitch(method=args.stitch,jump_reference=args.stitch_reference)
+    if args.proximal_reference:
+        c_base.stitch(method=args.stitch,jump_reference=args.stitch_reference)
+
+if args.interpolate:
+    print_if_verbose('interpolating...')
+    c.interpolate(spacing=args.interpolate_spacing, method=args.interpolate)
+    if args.proximal_reference:
+        c_base.interpolate(spacing=args.interpolate_spacing, method=args.interpolate)
+
+if args.jump_correct:
+    print_if_verbose('Jump correcting...')
+    c.jump_correct(splices=args.jump_correct_splices,
+                   reference=args.jump_correct_reference,
+                   method=args.jump_correct)
+    if args.proximal_reference:
+        c_base.jump_correct(splices=args.jump_correct_splices,
+                            reference=args.jump_correct_reference,
+                            method=args.jump_correct)
+
+if args.proximal_reference:
+    print_if_verbose('Joining proximal data...')
+    c = proximal_join(c_base, c, on='gps_time_tgt', direction='nearest')
+
+
+#filter bad
+def do_filters(c):
+    if args.filter_std or args.filter_threshold or args.filter_white:
+        print_if_verbose('Filtering...',end=' ')
+        if not filters.is_monotonic(c):
+            print("ERROR: Attempting to filter unstitched spectra. See specdal_pipeline --help")
+            sys.exit(1)
+    c_bads = []
+    #TODO: Nicer way to select from various filter methods
+    #or a way to chain filtering methods
+    if args.filter_white:
+        c, c_bad = filters.filter_white(c)
+        if not (c_bad.data is None):
+            c_bads.append(c_bad.data)
+
+    if args.filter_std and c.data is not None:
+        if len(args.filter_std)%3 != 0:
+            print("Incorrect parameters for --filter_std. See specdal_pipeline --help")
+            sys.exit(1)
+
+        for i in range(0,len(args.filter_std),3):
+            wl1,wl2,std_thresh = args.filter_std[i:i+3]
+            c, c_bad = filters.filter_std(c, wl1, wl2, std_thresh,
+                    group = args.filter_group)
+            if not (c_bad.data is None):
+                c_bads.append(c_bad.data)
+
+    if args.filter_threshold and c.data is not None:
+        if len(args.filter_threshold)%4 != 0:
+            print("Incorrect parameters for --filter_threshold. See specdal_pipeline --help")
+            sys.exit(1)
+        for i in range(0,len(args.filter_threshold),4):
+            wl1,wl2,low,high = args.filter_threshold[i:i+4]
+            c, c_bad = filters.filter_threshold(c, wl1, wl2, low, high,
+                    group = args.filter_group)
+            if not (c_bad.data is None):
+                c_bads.append(c_bad.data)
+
+
+    if len(c_bads) > 0:
+        c_bad = df_to_collection(pd.concat(c_bads,axis=1).T,name=c.name+'_rejected')
+        print_if_verbose('Rejected {} spectra'.format(len(c_bad.spectra)),end=' ')
+        if len(c_bad.spectra):
+            if not args.omit_figures:
+                c_bad.plot(legend=False)
+                if args.ylim:
+                    plt.ylim(*args.ylim)
+                plt.savefig(os.path.join(figdir, c.name + "_rejected.png"),  bbox_inches="tight")
+                plt.close()
+            if not args.omit_data:
+                c_bad.to_csv(os.path.join(datadir, c.name + '_rejected.csv'))
+    if args.filter_std or args.filter_threshold or args.filter_white:
+        print_if_verbose('')
+    return c
+
+if args.filter_on in ('collection','both'):
+    c = do_filters(c)
+# group by
+groups = None
+if args.group_by:
+    print_if_verbose('Grouping...')
+    groups = c.groupby(separator=args.group_by_separator,
+                       indices=args.group_by_indices)
+    if args.filter_on in ('group','both'):
+        bad_keys = []
+        for key in groups:
+            groups[key] = do_filters(groups[key])
+            #reject the groups with no good data
+            if groups[key].data is None:
+                bad_keys.append(key)
+        for key in bad_keys:
+            groups.pop(key)
+
+# output individual spectra
+if not args.omit_individual:
+    if not args.omit_figures:
+        print_if_verbose('Saving individual spectrum outputs...')
+    indiv_datadir = os.path.join(datadir, 'indiv')
+    indiv_figdir = os.path.join(figdir, 'indiv')
+    os.mkdir(indiv_datadir)
+    os.mkdir(indiv_figdir)
+    for spectrum in c.spectra:
+        if not args.omit_data:
+            spectrum.to_csv(os.path.join(indiv_datadir, spectrum.name + '.csv'))
+        if not args.omit_figures:
+            spectrum.plot(legend=False)
+            if args.ylim:
+                plt.ylim(*args.ylim)
+            plt.savefig(os.path.join(indiv_figdir, spectrum.name + '.png'), bbox_inches='tight')
+            plt.close()
+
+# output whole and group data
+if not args.omit_data:
+    print_if_verbose('Saving entire and grouped data outputs...')
+    c.to_csv(os.path.join(datadir, c.name + ".csv"))
+    if groups:
+        for group_id, group_coll in groups.items():
+            group_coll.to_csv(os.path.join(datadir, group_id + '.csv'))
+
+# calculate group aggregates
+if len(args.aggr) > 0:
+    print_if_verbose('Calculating group aggregates...')
+for aggr in args.aggr:
+    aggr_coll = Collection(name=c.name+'_'+aggr,
+                                 spectra=[getattr(group_coll, aggr)(append=True)
+                                          for group_coll in groups.values()],
+                                 measure_type=c.measure_type)
+    # output
+    print_if_verbose('Saving group {} outputs...'.format(aggr))
+    aggr_coll.to_csv(os.path.join(datadir, aggr_coll.name + '.csv'))
+    aggr_coll.plot(legend=False)
+    if args.ylim:
+        plt.ylim(*args.ylim)
+    plt.savefig(os.path.join(figdir, aggr_coll.name + '.png'), bbox_inches='tight')
+    plt.close()
+
+# output whole and group figures (possibly with aggregates appended)
+if not args.omit_figures:
+    print_if_verbose('Saving entire and grouped figure outputs...')
+    c.plot(legend=False)
+    if args.ylim:
+        plt.ylim(*args.ylim)
+    plt.savefig(os.path.join(figdir, c.name + ".png"),  bbox_inches="tight")
+    plt.close()
+    if groups:
+        for group_id, group_coll in groups.items():
+            group_coll.plot(legend=False)
+            if args.ylim:
+                plt.ylim(*args.ylim)
+            plt.savefig(os.path.join(figdir, group_id + ".png"),  bbox_inches="tight")
+            plt.close()
